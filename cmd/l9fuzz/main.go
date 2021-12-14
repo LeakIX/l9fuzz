@@ -7,7 +7,7 @@ import (
 )
 
 var App struct {
-	Scan l9l4gfuzz.Scanner `cmd help:"Scans url for JNDI"`
+	Scan l9l4gfuzz.Scanner `kong:"cmd,help:'Scans urls for JNDI'"`
 }
 
 func main() {

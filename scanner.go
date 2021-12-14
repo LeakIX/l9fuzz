@@ -6,21 +6,23 @@ import (
 	"github.com/gboddin/goccm"
 	"github.com/schollz/progressbar/v3"
 	"io"
+	"log"
 	"os"
 	"time"
 )
 
 type Scanner struct {
-	Timeout        time.Duration `default:"2s"`
-	Wait           time.Duration `default:"1m"`
-	ListenAddress  string        `short:"l" required help:"Listen address (ip:port)"`
-	InputFile      *os.File      `short:"i" required help:"Input file, - for STDIN"`
-	OutputFile     *os.File      `short:"o" help:"Output file"`
-	LDAPDebug      *os.File      `short:"L" help:"LDAP server debug log file"`
-	MaxConnections int           `short:"m" help:"Max connections" default:"100"`
-	Quiet          bool          `short:"q" help:"No progress bar" default:"false"`
-	Psk            string        `short:"k" help:"Payload sign key" default:"no-payload-check"`
-	Template       string        `short:"t" help:"Bypasses protocols and use TCP template (stateless)"`
+	Timeout        time.Duration `kong:"default:'2s'"`
+	Wait           time.Duration `kong:"default:'1m'"`
+	ListenAddress  string        `kong:"short:'l',required,help:'Listen address (ip:port)'"`
+	InputFile      *os.File      `kong:"short:'i',required,help:'Input file, - for STDIN'"`
+	OutputFile     *os.File      `kong:"short:'o',help:'Output file'"`
+	LDAPDebug      *os.File      `kong:"short:'L',help:'LDAP server debug log file'"`
+	MaxConnections int           `kong:"short:'m',help:'Max connections',default:'100'"`
+	Quiet          bool          `kong:"short:'q',help:'No progress bar',default:'false'"`
+	Debug          bool          `kong:"short:'d',help:'Debug',default:'false'"`
+	Psk            string        `kong:"short:'k',help:'Payload sign key',default:'no-payload-check'"`
+	Template       string        `kong:"short:'t',help:'Bypasses protocols and use TCP template (stateless)'"`
 	ccm            *goccm.ConcurrencyManager
 	outputChannel  FuzzerChannel
 	bar            *progressbar.ProgressBar
@@ -38,9 +40,15 @@ func (cmd *Scanner) displayResults() {
 		if !open {
 			return
 		}
-		writer.Write([]byte(
-			fmt.Sprintf("[ldap-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
-				result.Ip, result.Port, result.Token.SourceUrl, result.Token.PayloadSource, time.Since(result.Token.IssueDate))))
+		if _, err := writer.Write(
+			[]byte(fmt.Sprintf("[ldap-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
+				result.Ip,
+				result.Port,
+				result.Token.SourceUrl,
+				result.Token.PayloadSource,
+				time.Since(result.Token.IssueDate)))); err != nil && cmd.Debug {
+			log.Println(err)
+		}
 
 	}
 }
@@ -48,9 +56,6 @@ func (cmd *Scanner) displayResults() {
 func (cmd *Scanner) Run() (err error) {
 	cmd.outputChannel = make(FuzzerChannel)
 	go cmd.displayResults()
-	if cmd.OutputFile != nil {
-		defer cmd.OutputFile.Close()
-	}
 	cmdFuzzer, err := NewFuzzer(
 		WithListenAddress(cmd.ListenAddress),
 		WithLDAPTimeout(cmd.Timeout),
@@ -78,15 +83,16 @@ func (cmd *Scanner) Run() (err error) {
 	}
 	cmd.ccm = goccm.New(cmd.MaxConnections)
 	lineReader := bufio.NewScanner(cmd.InputFile)
-	totalLines := 0
 	for lineReader.Scan() {
 		line := lineReader.Text()
 		cmd.ccm.Wait()
 		go func() {
 			defer cmd.ccm.Done()
-			cmdFuzzer.FuzzUrl(line)
-			totalLines++
+			if err := cmdFuzzer.FuzzUrl(line); err != nil && cmd.Debug {
+				log.Println(err)
+			}
 			if cmd.bar != nil {
+				// #nosec , progress bar can fail
 				cmd.bar.Add(1)
 			}
 		}()
@@ -97,5 +103,8 @@ func (cmd *Scanner) Run() (err error) {
 	cmd.ccm.WaitAllDone()
 	time.Sleep(cmd.Wait)
 	close(cmd.outputChannel)
+	if cmd.OutputFile != nil {
+		return cmd.OutputFile.Close()
+	}
 	return nil
 }

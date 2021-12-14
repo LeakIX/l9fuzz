@@ -15,6 +15,7 @@ func HttpClient() *http.Client {
 			DialContext: func(ctx context.Context, network string, address string) (net.Conn, error) {
 				return l9format.ServicePluginBase{}.DialContext(ctx, "tcp", address)
 			},
+			// #nosec because we're a scanner
 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 			MaxConnsPerHost:       2,
 			DisableKeepAlives:     true,

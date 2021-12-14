@@ -49,6 +49,7 @@ func WithGenericTemplate(filePath string) FuzzerOption {
 		if filePath == "" {
 			return nil
 		}
+		// #nosec We'll allow the CLI user to read his own files
 		fileBytes, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return err

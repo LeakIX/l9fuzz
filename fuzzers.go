@@ -59,7 +59,7 @@ func (f *fuzzer) FuzzHttp(parsedUrl *url.URL) (err error) {
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	io.Copy(io.Discard, resp.Body)
+	_, err = io.Copy(io.Discard, resp.Body)
 	return err
 }
 
