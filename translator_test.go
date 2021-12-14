@@ -8,20 +8,20 @@ import (
 var tokenTranslatorA = &TokenTranslator{Secret: []byte("TranslatorA pre-shared-key")}
 var tokenTranslatorB = &TokenTranslator{Secret: []byte("TranslatorB pre-shared-key")}
 
-var tokenAHash = "7b22536f7572636555726c223a22687474703a2f2f3132372e302e302e313a333232222c225061796c6f6164536f75726365223a227373682075736572222c22497373756544617465223a22313937302d30312d30315430313a30303a30302b30313a3030227dbf2f4bb3942e659c2a60cd7a747d2cf0"
+var tokenAHash = "7b22536f7572636555726c223a22687474703a2f2f3132372e302e302e313a333232222c225061796c6f6164536f75726365223a227373682075736572222c22497373756544617465223a22313937302d30312d30315430303a30303a30305a227ddb0afba09a4149ccc4303e0ca2f8a3c1"
 
 //var tokenABadHash = "ffff71000001bb010a00000000000000004774347a2fd1e8b82c05af1ccf40af40"
 
 var tokenA = Token{
 	SourceUrl:     "http://127.0.0.1:322",
 	PayloadSource: "ssh user",
-	IssueDate:     time.Unix(0, 0),
+	IssueDate:     time.Unix(0, 0).UTC(),
 }
 
 var tokenB = Token{
 	SourceUrl:     "http://8.8.8.8",
 	PayloadSource: "http user",
-	IssueDate:     time.Unix(0, 0),
+	IssueDate:     time.Unix(0, 0).UTC(),
 }
 
 func BenchmarkTokenTranslator_GetHashFromToken(b *testing.B) {
@@ -62,7 +62,7 @@ func TestTokenTranslator_GetTokenFromHash(t *testing.T) {
 		if token.SourceUrl != tokenA.SourceUrl {
 			t.Error("token ip is incorrect")
 		}
-		if token.IssueDate != tokenA.IssueDate {
+		if token.IssueDate.UTC() != tokenA.IssueDate {
 			t.Error("token date is incorrect")
 		}
 		if token.PayloadSource != tokenA.PayloadSource {
