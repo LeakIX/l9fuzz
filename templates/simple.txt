@@ -1,0 +1,1 @@
+{{ .Fuzzer.PayloadJNDILog4J .Url.String "TCP" }}
