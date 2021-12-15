@@ -14,11 +14,12 @@ import (
 )
 
 type fuzzer struct {
-	ldapserverOutput    io.Writer
-	listenAddress       string
-	ListenIp            string
-	ListenPort          string
-	ldapTimeout         time.Duration
+	ldapserverOutput io.Writer
+	listenAddress    string
+	ListenIp         string
+	ListenPort       string
+	timeout          time.Duration
+
 	tokenTranslator     *TokenTranslator
 	ldapserver          *ldapserver.Server
 	l9Helper            l9format.ServicePluginBase
@@ -58,8 +59,8 @@ func NewFuzzer(opts ...FuzzerOption) (*fuzzer, error) {
 	if err != nil {
 		return nil, err
 	}
-	if newfuzzer.ldapTimeout == 0 {
-		newfuzzer.ldapTimeout = 2 * time.Second
+	if newfuzzer.timeout == 0 {
+		newfuzzer.timeout = 2 * time.Second
 	}
 	if newfuzzer.ldapserverOutput == nil {
 		newfuzzer.ldapserverOutput = ioutil.Discard
@@ -68,8 +69,8 @@ func NewFuzzer(opts ...FuzzerOption) (*fuzzer, error) {
 	ldapserver.Logger = log.New(newfuzzer.ldapserverOutput, "[ldapserver] ", log.LstdFlags)
 	// attach ldap server to instance
 	newfuzzer.ldapserver = ldapserver.NewServer()
-	newfuzzer.ldapserver.ReadTimeout = newfuzzer.ldapTimeout
-	newfuzzer.ldapserver.WriteTimeout = newfuzzer.ldapTimeout
+	newfuzzer.ldapserver.ReadTimeout = newfuzzer.timeout
+	newfuzzer.ldapserver.WriteTimeout = newfuzzer.timeout
 	// attach routes to ldap server
 	ldaproutes := ldapserver.NewRouteMux()
 	ldaproutes.Bind(newfuzzer.handleLDAPBind)

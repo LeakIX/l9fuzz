@@ -2,6 +2,8 @@ package l9l4gfuzz
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
 	"errors"
 	"golang.org/x/crypto/ssh"
 	"io"
@@ -35,12 +37,14 @@ func (f *fuzzer) FuzzUrl(inputUrl string) (err error) {
 }
 
 func (f *fuzzer) FuzzHttp(parsedUrl *url.URL) (err error) {
+	ctx, ctxCancel := context.WithTimeout(context.Background(), f.timeout)
+	defer ctxCancel()
 	sourceUrl := parsedUrl.String()
 	if len(parsedUrl.Path) < 1 || parsedUrl.Path == "/" {
 		parsedUrl.Path = "/" + f.PayloadJNDILog4J(sourceUrl, "http-url-path")
 	}
 	parsedUrl.RawQuery = f.PayloadJNDILog4J(sourceUrl, "http-url-query-key") + "=" + f.PayloadJNDILog4J(sourceUrl, "http-url-query-value")
-	req, err := http.NewRequest(http.MethodGet, parsedUrl.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, parsedUrl.String(), nil)
 	if err != nil {
 		return
 	}
@@ -85,7 +89,7 @@ func (f *fuzzer) FuzzSSH(parsedUrl *url.URL) (err error) {
 		BannerCallback: func(message string) error {
 			return nil
 		},
-		Timeout: 3 * time.Second,
+		Timeout: f.timeout,
 	})
 	return err
 }
@@ -108,7 +112,22 @@ func (f *fuzzer) FuzzTemplate(parsedUrl *url.URL) (err error) {
 		return
 	}
 	defer conn.Close()
-	err = conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+	// Upgrade to TLS if scheme is https/ssl or tls
+	if parsedUrl.Scheme == "https" || parsedUrl.Scheme == "ssl" || parsedUrl.Scheme == "tls" {
+		err = conn.SetDeadline(time.Now().Add(f.timeout))
+		if err != nil {
+			return
+		}
+		conn = tls.Client(conn,
+			// #nosec because we're a scanner
+			&tls.Config{InsecureSkipVerify: true, ServerName: host},
+		)
+		err = conn.(*tls.Conn).Handshake()
+		if err != nil {
+			return
+		}
+	}
+	err = conn.SetDeadline(time.Now().Add(f.timeout))
 	if err != nil {
 		return err
 	}

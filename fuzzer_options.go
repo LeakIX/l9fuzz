@@ -23,9 +23,9 @@ func WithListenAddress(address string) FuzzerOption {
 	}
 }
 
-func WithLDAPTimeout(timeout time.Duration) FuzzerOption {
+func WithTimeout(timeout time.Duration) FuzzerOption {
 	return func(f *fuzzer) error {
-		f.ldapTimeout = timeout
+		f.timeout = timeout
 		return nil
 	}
 }

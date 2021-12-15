@@ -12,17 +12,17 @@ import (
 )
 
 type Scanner struct {
-	Timeout        time.Duration `kong:"default:'2s'"`
-	Wait           time.Duration `kong:"default:'1m'"`
-	ListenAddress  string        `kong:"short:'l',required,help:'Listen address (ip:port)'"`
-	InputFile      *os.File      `kong:"short:'i',required,help:'Input file, - for STDIN'"`
-	OutputFile     *os.File      `kong:"short:'o',help:'Output file'"`
-	LDAPDebug      *os.File      `kong:"short:'L',help:'LDAP server debug log file'"`
-	MaxConnections int           `kong:"short:'m',help:'Max connections',default:'100'"`
-	Quiet          bool          `kong:"short:'q',help:'No progress bar',default:'false'"`
-	Debug          bool          `kong:"short:'d',help:'Debug',default:'false'"`
-	Psk            string        `kong:"short:'k',help:'Payload sign key',default:'no-payload-check'"`
-	Template       string        `kong:"short:'t',help:'Bypasses protocols and use TCP template (stateless)'"`
+	Timeout        time.Duration `kong:"default='2s'"`
+	Wait           time.Duration `kong:"default='1m'"`
+	ListenAddress  string        `kong:"short='l',required,help='Listen address (ip:port)'"`
+	InputFile      *os.File      `kong:"short='i',required,help='Input file, - for STDIN'"`
+	OutputFile     *os.File      `kong:"short='o',help='Output file'"`
+	LDAPDebug      *os.File      `kong:"short='L',help='LDAP server debug log file'"`
+	MaxConnections int           `kong:"short='m',help='Max connections',default='100'"`
+	Quiet          bool          `kong:"short='q',help='No progress bar',default='false'"`
+	Debug          bool          `kong:"short='d',help='Debug',default='false'"`
+	Psk            string        `kong:"short='k',help='Payload sign key',default='no-payload-check'"`
+	Template       string        `kong:"short='t',help='Bypasses protocols and use TCP template (stateless)'"`
 	ccm            *goccm.ConcurrencyManager
 	outputChannel  FuzzerChannel
 	bar            *progressbar.ProgressBar
@@ -58,7 +58,7 @@ func (cmd *Scanner) Run() (err error) {
 	go cmd.displayResults()
 	cmdFuzzer, err := NewFuzzer(
 		WithListenAddress(cmd.ListenAddress),
-		WithLDAPTimeout(cmd.Timeout),
+		WithTimeout(cmd.Timeout),
 		WithLDAPLogOutput(cmd.LDAPDebug),
 		WithOutputChannel(cmd.outputChannel),
 		WithTokenTranslator(&TokenTranslator{Secret: []byte(cmd.Psk)}),
