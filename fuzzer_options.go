@@ -23,9 +23,9 @@ func WithListenAddress(address string) FuzzerOption {
 	}
 }
 
-func WithLDAPTimeout(timeout time.Duration) FuzzerOption {
+func WithTimeout(timeout time.Duration) FuzzerOption {
 	return func(f *fuzzer) error {
-		f.ldapTimeout = timeout
+		f.timeout = timeout
 		return nil
 	}
 }
@@ -49,6 +49,7 @@ func WithGenericTemplate(filePath string) FuzzerOption {
 		if filePath == "" {
 			return nil
 		}
+		// #nosec We'll allow the CLI user to read his own files
 		fileBytes, err := ioutil.ReadFile(filePath)
 		if err != nil {
 			return err

