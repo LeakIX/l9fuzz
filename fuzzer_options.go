@@ -23,9 +23,9 @@ func WithListenAddress(address string) FuzzerOption {
 	}
 }
 
-func WithTimeout(timeout time.Duration) FuzzerOption {
+func WithTimeout(timeout int) FuzzerOption {
 	return func(f *fuzzer) error {
-		f.timeout = timeout
+		f.timeout = time.Duration(timeout) * time.Second
 		return nil
 	}
 }
@@ -44,7 +44,7 @@ func WithOutputChannel(outputChannel FuzzerChannel) FuzzerOption {
 	}
 }
 
-func WithGenericTemplate(filePath string) FuzzerOption {
+func WithRequestTemplate(filePath string) FuzzerOption {
 	return func(f *fuzzer) error {
 		if filePath == "" {
 			return nil
@@ -54,7 +54,25 @@ func WithGenericTemplate(filePath string) FuzzerOption {
 		if err != nil {
 			return err
 		}
-		f.genericTemplate, err = template.New("generic").Parse(string(fileBytes))
+		f.requestTemplate, err = template.New("request_template").Parse(string(fileBytes))
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+}
+
+func WithPayloadTemplate(filePath string) FuzzerOption {
+	return func(f *fuzzer) error {
+		if filePath == "" {
+			return nil
+		}
+		// #nosec We'll allow the CLI user to read his own files
+		fileBytes, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+		f.payloadTemplate, err = template.New("payload_template").Parse(string(fileBytes))
 		if err != nil {
 			return err
 		}

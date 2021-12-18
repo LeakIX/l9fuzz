@@ -1,0 +1,6 @@
+{
+  "Hash": "{{ .Hash }}",
+  "HTTPPort": "{{ .Fuzzer.HTTPPort }}",
+  "LDAPPort": "{{ .Fuzzer.LDAPPort }}",
+  "ListenIp": "{{ .Fuzzer.ListenIp }}"
+}

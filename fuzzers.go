@@ -21,7 +21,7 @@ func (f *fuzzer) FuzzUrl(inputUrl string) (err error) {
 			return err
 		}
 	}
-	if f.genericTemplate != nil {
+	if f.requestTemplate != nil {
 		//TCP mode
 		return f.FuzzTemplate(parsedUrl)
 	}
@@ -100,7 +100,7 @@ func (f *fuzzer) FuzzTemplate(parsedUrl *url.URL) (err error) {
 		return errors.New("not port for generic tcp")
 	}
 	var buffer bytes.Buffer
-	err = f.genericTemplate.Execute(&buffer, struct {
+	err = f.requestTemplate.Execute(&buffer, struct {
 		Url    *url.URL
 		Fuzzer *fuzzer
 	}{
