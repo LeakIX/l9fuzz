@@ -2,6 +2,7 @@ package l9l4gfuzz
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/gboddin/goccm"
 	"github.com/schollz/progressbar/v3"
@@ -22,6 +23,7 @@ type Scanner struct {
 	PayloadTemplate string   `kong:"short='p',help='Uses a custom payload'"`
 	Timeout         int      `kong:"short='t',default='2',help='Timeout (LDAP,http,tcp...)'"`
 	Wait            int      `kong:"short='w',default='60',help='Wait for ping after scan is done, < 0 waits forever'"`
+	JSON            bool     `kong:"short='j',default='false',help='Output results as JSON'"`
 	Quiet           bool     `kong:"short='q',help='No progress bar',default='false'"`
 	LDAPDebug       *os.File `kong:"short='L',help='LDAP server debug log file'"`
 	Debug           bool     `kong:"short='d',help='Debug',default='false'"`
@@ -38,20 +40,30 @@ func (cmd *Scanner) displayResults() {
 	} else {
 		writer = os.Stdout
 	}
+	var jsonEncoder *json.Encoder
+	if cmd.JSON {
+		jsonEncoder = json.NewEncoder(writer)
+	}
 	for {
 		result, open := <-cmd.outputChannel
 		if !open {
 			return
 		}
-		if _, err := writer.Write(
-			[]byte(fmt.Sprintf("[%s-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
-				result.Protocol,
-				result.Ip,
-				result.Port,
-				result.Token.SourceUrl,
-				result.Token.PayloadSource,
-				time.Since(result.Token.IssueDate)))); err != nil && cmd.Debug {
-			log.Println(err)
+		if jsonEncoder != nil {
+			if err := jsonEncoder.Encode(result); err != nil {
+				log.Fatalln(err)
+			}
+		} else {
+			if _, err := writer.Write(
+				[]byte(fmt.Sprintf("[%s-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
+					result.Protocol,
+					result.Ip,
+					result.Port,
+					result.Token.SourceUrl,
+					result.Token.PayloadSource,
+					time.Since(result.Token.IssueDate)))); err != nil && cmd.Debug {
+				log.Fatalln(err)
+			}
 		}
 
 	}
@@ -74,6 +86,7 @@ func (cmd *Scanner) Run() (err error) {
 	}
 	if !cmd.Quiet {
 		cmd.bar = progressbar.NewOptions(-1,
+			progressbar.OptionSetWriter(os.Stderr),
 			progressbar.OptionEnableColorCodes(true),
 			progressbar.OptionShowIts(),
 			progressbar.OptionSetWidth(40),
