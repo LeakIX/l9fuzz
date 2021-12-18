@@ -8,24 +8,27 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"time"
 )
 
 type Scanner struct {
-	Timeout        time.Duration `kong:"default='2s'"`
-	Wait           time.Duration `kong:"default='1m'"`
-	ListenAddress  string        `kong:"short='l',required,help='Listen address (ip:port)'"`
-	InputFile      *os.File      `kong:"short='i',required,help='Input file, - for STDIN'"`
-	OutputFile     *os.File      `kong:"short='o',help='Output file'"`
-	LDAPDebug      *os.File      `kong:"short='L',help='LDAP server debug log file'"`
-	MaxConnections int           `kong:"short='m',help='Max connections',default='100'"`
-	Quiet          bool          `kong:"short='q',help='No progress bar',default='false'"`
-	Debug          bool          `kong:"short='d',help='Debug',default='false'"`
-	Psk            string        `kong:"short='k',help='Payload sign key',default='no-payload-check'"`
-	Template       string        `kong:"short='t',help='Bypasses protocols and use TCP template (stateless)'"`
-	ccm            *goccm.ConcurrencyManager
-	outputChannel  FuzzerChannel
-	bar            *progressbar.ProgressBar
+	ListenAddress   string   `kong:"short='l',required,help='Listen address (ip:port)'"`
+	InputFile       *os.File `kong:"short='i',required,help='Input file, - for STDIN'"`
+	OutputFile      *os.File `kong:"short='o',help='Output file'"`
+	MaxConnections  int      `kong:"short='m',help='Max connections',default='100'"`
+	Psk             string   `kong:"short='k',help='Payload sign key',default='no-payload-check'"`
+	RequestTemplate string   `kong:"short='r',help='Uses a custom request template'"`
+	PayloadTemplate string   `kong:"short='p',help='Uses a custom payload'"`
+	Timeout         int      `kong:"short='t',default='2',help='Timeout (LDAP,http,tcp...)'"`
+	Wait            int      `kong:"short='w',default='60',help='Wait for ping after scan is done, < 0 waits forever'"`
+	Quiet           bool     `kong:"short='q',help='No progress bar',default='false'"`
+	LDAPDebug       *os.File `kong:"short='L',help='LDAP server debug log file'"`
+	Debug           bool     `kong:"short='d',help='Debug',default='false'"`
+
+	ccm           *goccm.ConcurrencyManager
+	outputChannel FuzzerChannel
+	bar           *progressbar.ProgressBar
 }
 
 func (cmd *Scanner) displayResults() {
@@ -41,7 +44,8 @@ func (cmd *Scanner) displayResults() {
 			return
 		}
 		if _, err := writer.Write(
-			[]byte(fmt.Sprintf("[ldap-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
+			[]byte(fmt.Sprintf("[%s-reply] From: %s:%s | Source: %s | Vector: %s | Delay: %s\n",
+				result.Protocol,
 				result.Ip,
 				result.Port,
 				result.Token.SourceUrl,
@@ -62,7 +66,8 @@ func (cmd *Scanner) Run() (err error) {
 		WithLDAPLogOutput(cmd.LDAPDebug),
 		WithOutputChannel(cmd.outputChannel),
 		WithTokenTranslator(&TokenTranslator{Secret: []byte(cmd.Psk)}),
-		WithGenericTemplate(cmd.Template),
+		WithRequestTemplate(cmd.RequestTemplate),
+		WithPayloadTemplate(cmd.PayloadTemplate),
 	)
 	if err != nil {
 		return err
@@ -101,7 +106,14 @@ func (cmd *Scanner) Run() (err error) {
 		cmd.bar.Describe("[cyan][2/2][reset] Waiting...")
 	}
 	cmd.ccm.WaitAllDone()
-	time.Sleep(cmd.Wait)
+	if cmd.Wait < 0 {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		//wait for interrupt
+		<-c
+	} else {
+		time.Sleep(time.Duration(cmd.Wait) * time.Second)
+	}
 	close(cmd.outputChannel)
 	if cmd.OutputFile != nil {
 		return cmd.OutputFile.Close()

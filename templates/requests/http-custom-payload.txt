@@ -1,0 +1,5 @@
+PUT /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1
+X-LeakIX: yes
+Content-Length: {{ len (.Fuzzer.Payload .Url.String "http-put-body") }}
+
+{{ .Fuzzer.Payload .Url.String "http-put-body" }}

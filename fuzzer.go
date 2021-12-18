@@ -6,31 +6,38 @@ import (
 	"github.com/gboddin/ldapserver"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
+	"net/http"
 	"net/url"
+	"strconv"
 	"text/template"
 	"time"
 )
 
 type fuzzer struct {
 	ldapserverOutput io.Writer
+	httpServer       *http.Server
 	listenAddress    string
 	ListenIp         string
-	ListenPort       string
+	LDAPPort         string
+	HTTPPort         string
+	SSHPort          string
+	GenericPort      string
 	timeout          time.Duration
 
 	tokenTranslator     *TokenTranslator
 	ldapserver          *ldapserver.Server
 	l9Helper            l9format.ServicePluginBase
 	fuzzerOutputChannel FuzzerChannel
-	genericTemplate     *template.Template
+	requestTemplate     *template.Template
+	payloadTemplate     *template.Template
 }
 
 type FuzzerResult struct {
-	Ip    string
-	Port  string
-	Token *Token
+	Ip       string
+	Port     string
+	Protocol string
+	Token    *Token
 }
 
 type FuzzerContext struct {
@@ -55,9 +62,23 @@ func NewFuzzer(opts ...FuzzerOption) (*fuzzer, error) {
 	if newfuzzer.tokenTranslator == nil {
 		newfuzzer.tokenTranslator = &TokenTranslator{Secret: []byte("insecure")}
 	}
-	newfuzzer.ListenIp, newfuzzer.ListenPort, err = net.SplitHostPort(newfuzzer.listenAddress)
+	newfuzzer.ListenIp, newfuzzer.LDAPPort, err = net.SplitHostPort(newfuzzer.listenAddress)
 	if err != nil {
 		return nil, err
+	}
+	baseport, err := strconv.Atoi(newfuzzer.LDAPPort)
+	if err != nil {
+		return nil, err
+	}
+	// Set ports for listeners
+	if newfuzzer.HTTPPort == "" {
+		newfuzzer.HTTPPort = strconv.Itoa(baseport + 1)
+	}
+	if newfuzzer.SSHPort == "" {
+		newfuzzer.SSHPort = strconv.Itoa(baseport + 2)
+	}
+	if newfuzzer.GenericPort == "" {
+		newfuzzer.GenericPort = strconv.Itoa(baseport + 3)
 	}
 	if newfuzzer.timeout == 0 {
 		newfuzzer.timeout = 2 * time.Second
@@ -65,56 +86,10 @@ func NewFuzzer(opts ...FuzzerOption) (*fuzzer, error) {
 	if newfuzzer.ldapserverOutput == nil {
 		newfuzzer.ldapserverOutput = ioutil.Discard
 	}
-	// Send LDAP logs to selected output
-	ldapserver.Logger = log.New(newfuzzer.ldapserverOutput, "[ldapserver] ", log.LstdFlags)
-	// attach ldap server to instance
-	newfuzzer.ldapserver = ldapserver.NewServer()
-	newfuzzer.ldapserver.ReadTimeout = newfuzzer.timeout
-	newfuzzer.ldapserver.WriteTimeout = newfuzzer.timeout
-	// attach routes to ldap server
-	ldaproutes := ldapserver.NewRouteMux()
-	ldaproutes.Bind(newfuzzer.handleLDAPBind)
-	ldaproutes.Search(newfuzzer.handleSearch)
-	newfuzzer.ldapserver.Handle(ldaproutes)
-	// Start LDAP server
-	go func() {
-		err := newfuzzer.ldapserver.ListenAndServe(newfuzzer.listenAddress)
-		if err != nil {
-			panic(err)
-		}
-	}()
+	newfuzzer.startLdapServer()
+	newfuzzer.startHttpServer()
 	// return fuzzer
 	return newfuzzer, nil
 }
-
-func (f *fuzzer) handleLDAPBind(w ldapserver.ResponseWriter, m *ldapserver.Message) {
-	w.Write(ldapserver.NewBindResponse(ldapserver.LDAPResultSuccess))
-}
-
-func (f *fuzzer) handleSearch(w ldapserver.ResponseWriter, m *ldapserver.Message) {
-	defer m.Client.GetConn().Close()
-	r := m.GetSearchRequest()
-	DN := string(r.BaseObject())
-	e := ldapserver.NewSearchResultEntry("")
-	e.AddAttribute("vendorName", "LeakIX")
-	e.AddAttribute("vendorVersion", "0.0.1")
-	w.Write(e)
-	res := ldapserver.NewSearchResultDoneResponse(ldapserver.LDAPResultSuccess)
-	w.Write(res)
-	token, err := f.tokenTranslator.GetTokenFromHash(DN)
-	if err == nil {
-		ip, port, err := net.SplitHostPort(m.Client.Addr().String())
-		if err != nil {
-			return
-		}
-		f.fuzzerOutputChannel <- FuzzerResult{
-			Ip:    ip,
-			Port:  port,
-			Token: token,
-		}
-	}
-}
-
-type Fuzzer func(parsedUrl *url.URL) (err error)
 
 var ErrNoFuzzerForScheme = errors.New("no fuzzer for scheme")
